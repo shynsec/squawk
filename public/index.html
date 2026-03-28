@@ -206,6 +206,10 @@
     .ctrl-btn:disabled { opacity:0.2; cursor:not-allowed; }
     .ctrl-btn:disabled:hover { border-color:var(--border); color:var(--text-mid); background:var(--bg3); }
 
+    /* Rename user modal */
+    .edit-name-btn { background:none; border:none; color:var(--text-dim); font-size:12px; cursor:pointer; padding:2px 4px; border-radius:4px; transition:color 0.15s; line-height:1; margin-left:2px; }
+    .edit-name-btn:hover { color:var(--blue); }
+
     /* Context menus */
     .ctx-menu { position:fixed; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:4px; box-shadow:0 8px 28px rgba(0,0,0,0.5); z-index:3000; min-width:170px; animation:ctx-in 0.12s ease; }
     @keyframes ctx-in{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
@@ -342,7 +346,7 @@
     <div class="self-info">
       <div class="self-avatar-wrap" id="self-avatar">👤</div>
       <div>
-        <div class="self-name" id="self-name-display">Not set</div>
+        <div style="display:flex;align-items:center;gap:4px"><div class="self-name" id="self-name-display">Not set</div><button class="edit-name-btn" id="edit-name-btn" title="Change name">✏️</button></div>
         <div class="self-status" id="self-status">Idle</div>
       </div>
     </div>
@@ -376,6 +380,19 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="cancel-rename">Cancel</button>
       <button class="btn-primary" id="confirm-rename" style="flex:1">Rename →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename user modal -->
+<div class="modal-overlay hidden" id="rename-user-modal">
+  <div class="modal">
+    <div class="modal-title">Change <span>Name</span></div>
+    <div class="input-label">New display name</div>
+    <input class="input-field" id="rename-user-input" placeholder="Enter new name..." maxlength="24"/>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancel-rename-user">Cancel</button>
+      <button class="btn-primary" id="confirm-rename-user" style="flex:1">Save →</button>
     </div>
   </div>
 </div>
@@ -503,6 +520,42 @@ function switchTab(tab){
 
 // ── Socket ──
 socket=io();
+
+// ── Rename user ──
+const renameUserModal = $('rename-user-modal');
+const renameUserInput = $('rename-user-input');
+
+$('edit-name-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  renameUserInput.value = userName;
+  renameUserModal.classList.remove('hidden');
+  renameUserInput.focus();
+  renameUserInput.select();
+});
+$('cancel-rename-user').addEventListener('click', (e) => {
+  e.stopPropagation();
+  renameUserModal.classList.add('hidden');
+});
+$('confirm-rename-user').addEventListener('click', (e) => {
+  e.stopPropagation();
+  doRenameUser();
+});
+renameUserModal.addEventListener('click', (e) => e.stopPropagation());
+renameUserInput.addEventListener('keydown', e => { if (e.key === 'Enter') doRenameUser(); });
+
+function doRenameUser() {
+  const n = renameUserInput.value.trim();
+  if (!n) return toast('Enter a name', 'error');
+  if (n === userName) { renameUserModal.classList.add('hidden'); return; }
+  socket.emit('rename-user', { newName: n }, res => {
+    if (res.error) return toast(res.error, 'error');
+    localStorage.setItem('squawk-name', n);
+    applyName(n);
+    renameUserModal.classList.add('hidden');
+    toast('Name updated!', 'success');
+  });
+}
+
 socket.on('connect',()=>{$('conn-status').textContent='Online';toast('Connected','success');});
 socket.on('disconnect',()=>{$('conn-status').textContent='Offline';toast('Connection lost','error');});
 socket.on('kicked',({by})=>{leaveRoom();toast(`You were kicked by ${escHtml(by)}`,'error');});
@@ -516,6 +569,12 @@ socket.on('channel-renamed',({oldId,newId})=>{
   }
 });
 socket.on('owner-changed',({owner,users})=>{currentOwner=owner;renderUsers(users);updateOwnerUI();toast(`👑 ${escHtml(owner)} is now the owner`);});
+socket.on('user-renamed',({socketId,oldName,newName,users,owner})=>{
+  currentOwner=owner;
+  renderUsers(users);
+  updateOwnerUI();
+  if(socketId!==socket.id) toast(`${escHtml(oldName)} is now ${escHtml(newName)}`);
+});
 socket.on('user-kicked',({name,users,owner})=>{currentOwner=owner;renderUsers(users);toast(`${escHtml(name)} was kicked`);});
 
 // ── Room list ──

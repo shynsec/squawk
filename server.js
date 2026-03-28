@@ -74,7 +74,12 @@ function sanitiseText(raw) {
 }
 
 // ── Persistent channels ──
-const CHANNELS_FILE = path.join(__dirname, "channels.json");
+// Store channels.json in /app/data when in Docker, else alongside server.js
+const DATA_DIR = process.env.NODE_ENV === "production"
+  ? path.join(__dirname, "data")
+  : __dirname;
+const CHANNELS_FILE = path.join(DATA_DIR, "channels.json");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function loadChannels() {
   try {
@@ -352,6 +357,43 @@ io.on("connection", (socket) => {
         users: getRoomUsers(socket.currentRoom),
       });
     }
+  }));
+
+  // ── Rename user ──
+  socket.on("rename-user", guard(({ newName }, cb) => {
+    if (typeof cb !== "function") return;
+    const cleanName = sanitiseName(newName);
+    if (!cleanName) return cb({ error: "Invalid name" });
+    if (cleanName === socket.userName) return cb({ error: "That's already your name" });
+
+    const oldName = socket.userName;
+    socket.userName = cleanName;
+
+    // Update user in current room if in one
+    if (socket.currentRoom && rooms[socket.currentRoom]) {
+      const room = rooms[socket.currentRoom];
+      const user = room.users.get(socket.id);
+      if (user) {
+        user.name = cleanName;
+        // Transfer ownership if they were the owner
+        if (room.owner === oldName) room.owner = cleanName;
+        // Update typing state
+        if (typingUsers[socket.currentRoom]?.has(oldName)) {
+          typingUsers[socket.currentRoom].delete(oldName);
+          typingUsers[socket.currentRoom].add(cleanName);
+        }
+        io.to(socket.currentRoom).emit("user-renamed", {
+          socketId: socket.id,
+          oldName,
+          newName: cleanName,
+          users: getRoomUsers(socket.currentRoom),
+          owner: room.owner,
+        });
+      }
+      io.emit("room-list", getRoomList());
+    }
+
+    cb({ ok: true });
   }));
 
   // ── Leave / disconnect ──
