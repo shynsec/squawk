@@ -1,0 +1,15 @@
+# Replace this with your domain name or Tailscale IP
+# Examples:
+#   your.domain.com
+#   100.x.x.x (Tailscale)
+#   localhost (local testing)
+
+https://your.domain.com {
+    reverse_proxy squawk:3000
+    tls internal
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+    }
+}

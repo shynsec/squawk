@@ -1,0 +1,10 @@
+node_modules/
+npm-debug.log
+channels.json
+.env
+.env.*
+caddy_data/
+caddy_config/
+*.pem
+key.pem
+cert.pem

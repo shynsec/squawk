@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+.npm
+.git
+.gitignore
+*.md
+channels.json
+.env
+.env.*

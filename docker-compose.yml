@@ -1,0 +1,45 @@
+services:
+  squawk:
+    build: .
+    container_name: squawk
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+    volumes:
+      - squawk_data:/app/data
+    networks:
+      - squawk_net
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: squawk_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - squawk_net
+    depends_on:
+      squawk:
+        condition: service_healthy
+
+volumes:
+  squawk_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  squawk_net:
+    driver: bridge
