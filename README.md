@@ -1,4 +1,8 @@
-# 🐦 Squawk
+<img width="64" height="64" alt="icon" src="https://github.com/user-attachments/assets/b6513b11-4bfe-4c94-8486-9111da8aebda" />
+
+
+# Squawk
+
 
 **Your voice. Your server. Your rules.**
 
