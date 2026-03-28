@@ -6,6 +6,9 @@ Squawk is a private, self-hosted voice and text chat app built for gaming groups
 
 Built and maintained by [shynsec](https://github.com/shynsec).
 
+<img width="1915" height="1063" alt="image" src="https://github.com/user-attachments/assets/ed66bc79-6156-4519-b8c3-b754c538aa63" />
+
+
 ---
 
 ## Why Squawk?
